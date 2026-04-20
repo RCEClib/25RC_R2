@@ -18,18 +18,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
-
-
 #include "dma.h"
-
-
 #include "fdcan.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -38,6 +32,7 @@
 #include "elrs.h"
 #include "fd.h"
 #include "chassis.h"
+#include "dg.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -117,6 +112,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM12_Init();
   MX_SPI6_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   Serial_Init();
   FDCAN_Init(&hfdcan1);
@@ -124,15 +120,18 @@ int main(void)
   ELRS_Init();
 
   Chassis_Init(&Chassis);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
   while (1)
   {
-    Serial_Printf("%d\n", motor_feedback[MOTOR_6020_ID1_INDEX + 0].speed);
-    Serial_Printf("%f,%f\n", target_speed, actual_speed);//3508
+    //Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2, 500, 0, 0, 0);
+    Set_Angle(remoter.var.S2 * 2.7f);
+    tuigan_Task(remoter.key.SD);
+    Serial_Printf("%d,%f\n", motor_feedback[MOTOR_2006_ID5_INDEX].loop / 36,motor_feedback[MOTOR_2006_ID5_INDEX].angle);
+    //Serial_Printf("%f,%f\n", target_speed, actual_speed);//2006
     Chassis_Task(&Chassis,remoter.key.SA,remoter.joy.l_x,remoter.joy.l_y,remoter.joy.r_y);
     HAL_Delay(0);
     /* USER CODE END WHILE */

@@ -3,8 +3,7 @@
 #include "pid.h"
 #include <math.h>
 #include <stdlib.h>
-
-#include "fdcan.h"
+#include "fd.h"
 
 // ============================ 全局变量定义 ============================
 float target_speed;        // 轮速PID目标值（RPM）
@@ -22,9 +21,9 @@ float right_current_out;   // 右轮输出电流
 #define MOTOR_3508_GEAR_RATIO  19.0f
 
 // 速度限幅
-#define MAX_LINEAR_SPEED    1.0f             // 最大线速度 (m/s)
-#define MAX_ANGULAR_SPEED   3.0f             // vy通道最大角速度 (rad/s)
-#define MAX_GYRO_SPEED      5.0f             // vw通道小陀螺最大角速度 (rad/s)
+#define MAX_LINEAR_SPEED    2.5f             // 最大线速度 (m/s)
+#define MAX_ANGULAR_SPEED   4.0f             // vy通道最大角速度 (rad/s)
+#define MAX_GYRO_SPEED      6.0f             // vw通道小陀螺最大角速度 (rad/s)
 
 // 安全保护：最大允许电流（根据电机和驱动器实际限制调整）
 #define MAX_WHEEL_CURRENT   16384            // 3508电机最大电流
@@ -67,8 +66,8 @@ void diff_solve(float vx, float omega, float *out_left_rpm, float *out_right_rpm
         omega = -MAX_ANGULAR_SPEED - MAX_GYRO_SPEED;
 
     float half_track = WHEEL_BASE / 2.0f;   // 矩阵中的 y
-    float v_left  = vx + half_track * omega;
-    float v_right = vx - half_track * omega;
+    float v_left  = vx - half_track * omega;
+    float v_right = vx + half_track * omega;
 
     *out_left_rpm  = LinearToMotorRpm(v_left);
     *out_right_rpm = LinearToMotorRpm(v_right);
@@ -85,16 +84,16 @@ void Chassis_Init(Chassis_t *chassis) {
 
     // 初始化轮向PID（位置式速度环，输入：RPM，输出：电流）
     for (int i = 0; i < 4; i++) {
-        PID_Init(&chassis->wheel_pid[i],2.0f, 0.0f, 0.0f,MAX_WHEEL_CURRENT, 1000);
+        PID_Init(&chassis->wheel_pid[i],6.2f, 1.4f, 0.1f,MAX_WHEEL_CURRENT, 1000);
         chassis->wheel_currents[i] = 0;
     }
 
     // 电机方向校准（根据实际接线调整，1=正向，-1=反向）
     // 顺序：0-左前, 1-左后, 2-右后, 3-右前
-    chassis->wheel_direction_calibration[0] =  1;   // 左前
-    chassis->wheel_direction_calibration[1] =  1;   // 左后
-    chassis->wheel_direction_calibration[2] = -1;   // 右后
-    chassis->wheel_direction_calibration[3] = -1;   // 右前
+    chassis->wheel_direction_calibration[0] = -1;   // 左前
+    chassis->wheel_direction_calibration[1] = -1;   // 左后
+    chassis->wheel_direction_calibration[2] =   1;   // 右后
+    chassis->wheel_direction_calibration[3] =   1;   // 右前
 
     // 验证并修正校准系数
     for (int i = 0; i < 4; i++) {
