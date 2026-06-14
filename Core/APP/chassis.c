@@ -3,7 +3,7 @@
 #include "pid.h"
 #include <math.h>
 #include <stdlib.h>
-#include "fd.h"
+#include "bsp_fdcan.h"
 
 // ============================ 全局变量定义 ============================
 float target_speed;        // 轮速PID目标值（RPM）
@@ -66,8 +66,8 @@ void diff_solve(float vx, float omega, float *out_left_rpm, float *out_right_rpm
         omega = -MAX_ANGULAR_SPEED - MAX_GYRO_SPEED;
 
     float half_track = WHEEL_BASE / 2.0f;   // 矩阵中的 y
-    float v_left  = vx - half_track * omega;
-    float v_right = vx + half_track * omega;
+    float v_left  = vx + half_track * omega;
+    float v_right = vx - half_track * omega;
 
     *out_left_rpm  = LinearToMotorRpm(v_left);
     *out_right_rpm = LinearToMotorRpm(v_right);
@@ -90,10 +90,10 @@ void Chassis_Init(Chassis_t *chassis) {
 
     // 电机方向校准（根据实际接线调整，1=正向，-1=反向）
     // 顺序：0-左前, 1-左后, 2-右后, 3-右前
-    chassis->wheel_direction_calibration[0] = -1;   // 左前
-    chassis->wheel_direction_calibration[1] = -1;   // 左后
-    chassis->wheel_direction_calibration[2] =   1;   // 右后
-    chassis->wheel_direction_calibration[3] =   1;   // 右前
+    chassis->wheel_direction_calibration[0] = 1;   // 左前
+    chassis->wheel_direction_calibration[1] = 1;   // 左后
+    chassis->wheel_direction_calibration[2] = -1;   // 右后
+    chassis->wheel_direction_calibration[3] = -1;   // 右前
 
     // 验证并修正校准系数
     for (int i = 0; i < 4; i++) {

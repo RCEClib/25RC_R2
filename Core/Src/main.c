@@ -30,9 +30,10 @@
 #include "motor.h"
 #include "serial.h"
 #include "elrs.h"
-#include "fd.h"
+#include "bsp_fdcan.h"
 #include "chassis.h"
-#include "dg.h"
+#include "Arm.h"
+#include "dm_motor_ctrl.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -67,7 +68,6 @@ static void MPU_Config(void);
 /* USER CODE BEGIN 0 */
 
 Chassis_t Chassis;
-
 /* USER CODE END 0 */
 
 /**
@@ -115,7 +115,22 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   Serial_Init();
-  FDCAN_Init(&hfdcan1);
+  bsp_fdcan_set_baud(&hfdcan1, CAN_CLASS, CAN_BR_1M);
+  bsp_fdcan_set_baud(&hfdcan2, CAN_CLASS, CAN_BR_1M);
+  bsp_fdcan_set_baud(&hfdcan3, CAN_CLASS, CAN_BR_1M);
+  bsp_can_init(&hfdcan1);
+  bsp_can_init(&hfdcan2);
+  bsp_can_init(&hfdcan3);
+
+  dm_motor_init();
+  HAL_Delay(500);
+  motor[Motor1].ctrl.mode = mit_mode;
+  //清除错误并使能
+  dm_motor_clear_err(&motor[Motor1]);
+  HAL_Delay(1000);
+  dm_motor_enable(&motor[Motor1]);
+  HAL_Delay(1000);
+
   Motor_Init();
   ELRS_Init();
 
@@ -127,9 +142,14 @@ int main(void)
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
   while (1)
   {
+    // 发送 MIT 控制指令（正弦位置）
+    static float t = 0;
+    t += 0.01f;
+    motor[Motor1].ctrl.pos_set = 3.14f * sinf(t);
+    dm_motor_ctrl_send(&motor[Motor1]);
+    HAL_Delay(10);
+
     //Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2, 500, 0, 0, 0);
-    Set_Angle(remoter.var.S2 * 2.7f);
-    tuigan_Task(remoter.key.SD);
     Serial_Printf("%d,%f\n", motor_feedback[MOTOR_2006_ID5_INDEX].loop / 36,motor_feedback[MOTOR_2006_ID5_INDEX].angle);
     //Serial_Printf("%f,%f\n", target_speed, actual_speed);//2006
     Chassis_Task(&Chassis,remoter.key.SA,remoter.joy.l_x,remoter.joy.l_y,remoter.joy.r_y);
