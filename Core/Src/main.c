@@ -139,7 +139,6 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
   while (1)
   {
     // 发送 MIT 控制指令（正弦位置）
@@ -152,7 +151,7 @@ int main(void)
     //Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2, 500, 0, 0, 0);
     Serial_Printf("%d,%f\n", motor_feedback[MOTOR_2006_ID5_INDEX].loop / 36,motor_feedback[MOTOR_2006_ID5_INDEX].angle);
     //Serial_Printf("%f,%f\n", target_speed, actual_speed);//2006
-    Chassis_Task(&Chassis,remoter.key.SA,remoter.joy.l_x,remoter.joy.l_y,remoter.joy.r_y);
+    Chassis_Task(&Chassis,remoter.key.SA,remoter.joy.l_x,remoter.joy.l_y,remoter.joy.r_y,remoter.key.SE);
     HAL_Delay(0);
     /* USER CODE END WHILE */
 

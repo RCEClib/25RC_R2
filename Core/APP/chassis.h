@@ -35,6 +35,6 @@ typedef struct {
 void Chassis_Init(Chassis_t *chassis);
 void diff_solve(float vx, float omega, float *out_left_rpm, float *out_right_rpm);
 void Chassis_Control(Chassis_t *chassis);
-void Chassis_Task(Chassis_t *Chassis, Chassis_Mode mode, float vx, float vy, float vw);
+void Chassis_Task(Chassis_t *Chassis, Chassis_Mode mode, float vx, float vy, float vw, int8_t valve);
 
 #endif

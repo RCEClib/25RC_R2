@@ -77,6 +77,8 @@ void diff_solve(float vx, float omega, float *out_left_rpm, float *out_right_rpm
 void Chassis_Init(Chassis_t *chassis) {
     if (chassis == NULL) return;
 
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_RESET);//气缸爬楼梯控制
+
     chassis->Target_Vx = 0.0f;
     chassis->Target_Omega = 0.0f;
     chassis->target_left_rpm = 0.0f;
@@ -159,8 +161,15 @@ void Chassis_Control(Chassis_t *chassis) {
  *       最终角速度 ω = (vy/100)*MAX_ANGULAR_SPEED + (vw/100)*MAX_GYRO_SPEED
  *       三个通道同时生效，无需模式切换，小陀螺效果由 vw 实时提供。
  */
-void Chassis_Task(Chassis_t *Chassis, Chassis_Mode mode, float vx, float vy, float vw) {
+void Chassis_Task(Chassis_t *Chassis, Chassis_Mode mode, float vx, float vy, float vw, int8_t valve) {
     if (Chassis == NULL) return;
+
+
+
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, valve);//爬楼梯气缸开关
+
+
+
 
     // 死区处理（摇杆小信号归零）
     if (fabsf(vx) < JOYSTICK_DEADZONE) vx = 0.0f;
