@@ -1,7 +1,7 @@
 #include "bsp_fdcan.h"
 
 // [MOD] 新增头文件：用于处理大疆电机和达妙电机反馈
-#include "motor.h"           // 大疆电机处理函数 Motor_ReceiveFeedback
+#include "DJI_Motor.h"           // 大疆电机处理函数 Motor_ReceiveFeedback
 #include "dm_motor_drv.h"    // 达妙电机反馈解析 dm_motor_fbdata, receive_motor_data
 #include "dm_motor_ctrl.h"   // 达妙电机全局数组 motor[]
 
@@ -268,8 +268,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
                 rx_header.Identifier = rec_id;
                 rx_header.IdType     = FDCAN_STANDARD_ID;
                 rx_header.DataLength = FDCAN_DLC_BYTES_8;   // 大疆协议固定8字节
-                // 调用大疆电机反馈解析函数（定义在 motor.c 中）
-                Motor_ReceiveFeedback(hfdcan, &rx_header, rx_data);
+                // 调用大疆电机反馈解析函数（定义在 DJI_Motor.c 中）
+                DJI_Motor_ReceiveFeedback(hfdcan, &rx_header, rx_data);
             }
         }
 

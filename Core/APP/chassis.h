@@ -26,9 +26,12 @@ typedef struct {
     float target_right_rpm;      // 右轮目标转速 (RPM)
 
     PID_Controller wheel_pid[4]; // 四个轮子的速度PID（位置式）
+    PID_Controller taisheng_pid[2];  // 两个抬升轮的速度PID（位置式）
     int16_t wheel_currents[4];   // 四个轮子的目标电流
+    int16_t taisheng_currents[2];   // 两个抬升轮的目标电流
 
     int8_t wheel_direction_calibration[4];  // 电机方向校准 (1或-1)
+    int8_t taisheng_direction_calibration[2];  // 电机方向校准 (1或-1)  抬升轮
 } Chassis_t;
 
 // 函数声明

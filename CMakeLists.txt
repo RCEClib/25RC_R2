@@ -48,7 +48,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
         Core/APP/chassis.c
         Core/APP/Arm.c
-        Core/APP/Grapper.c
+        Core/APP/Grabber.c
 
         Core/BSP/BMI088driver.c
         Core/BSP/BMI088Middleware.c
@@ -61,7 +61,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         Core/Hardware/dm_motor_drv.c
         Core/Hardware/elrs.c
         Core/Hardware/imu.c
-        Core/Hardware/motor.c
+        Core/Hardware/DJI_Motor.c
         Core/Hardware/YOU.c
 )
 

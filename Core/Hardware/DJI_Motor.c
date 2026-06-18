@@ -7,7 +7,7 @@
  *          索引范围：3508(0-7), 6020(8-14), 2006(15-22)
  */
 
-#include "motor.h"
+#include "DJI_Motor.h"
 #include "bsp_fdcan.h"          // 包含 hfdcan1/2/3 的声明
 #include "Serial.h"      // 调试打印（可根据需要保留或删除）
 
@@ -16,7 +16,7 @@
 /* =========================== 全局变量定义 =========================== */
 Motor_Feedback_t motor_feedback[MOTOR_NUM] = {0};
 
-// ---------- 配置表（请根据实际接线修改）----------
+// ---------- 配置表（重要！请根据实际接线修改）----------
 // 格式：{ CAN口编号(1~3), CAN接收ID, 电机类型, 存储索引 }
 // 存储索引请使用上面定义的宏，例如 MOTOR_2006_ID5_INDEX 等
 // 注意：store_index 必须唯一且小于 MOTOR_NUM
@@ -26,30 +26,32 @@ const Motor_Config_t motor_configs[] = {//////////////注释掉实际没有用�
     {1, 0x202, MOTOR_3508, MOTOR_3508_ID2_INDEX},
     {1, 0x203, MOTOR_3508, MOTOR_3508_ID3_INDEX},
     {1, 0x204, MOTOR_3508, MOTOR_3508_ID4_INDEX},
-    // {1, 0x205, MOTOR_3508, MOTOR_3508_ID5_INDEX},
+    //{1, 0x205, MOTOR_3508, MOTOR_3508_ID5_INDEX},
     // {1, 0x206, MOTOR_3508, MOTOR_3508_ID6_INDEX},
     // {1, 0x207, MOTOR_3508, MOTOR_3508_ID7_INDEX},
     // {1, 0x208, MOTOR_3508, MOTOR_3508_ID8_INDEX},
+
     //6020电机（索引8~14）
-    // {3, 0x205, MOTOR_6020, MOTOR_6020_ID1_INDEX},
-    // {3, 0x206, MOTOR_6020, MOTOR_6020_ID2_INDEX},
-    // {3, 0x207, MOTOR_6020, MOTOR_6020_ID3_INDEX},
-    // {3, 0x208, MOTOR_6020, MOTOR_6020_ID4_INDEX},
+    //{2, 0x205, MOTOR_6020, MOTOR_6020_ID1_INDEX},
+    //{2, 0x206, MOTOR_6020, MOTOR_6020_ID2_INDEX},
+    //{2, 0x207, MOTOR_6020, MOTOR_6020_ID3_INDEX},
+    //{2, 0x208, MOTOR_6020, MOTOR_6020_ID4_INDEX},
     // {3, 0x209, MOTOR_6020, MOTOR_6020_ID5_INDEX},
     // {3, 0x20A, MOTOR_6020, MOTOR_6020_ID6_INDEX},
     // {3, 0x20B, MOTOR_6020, MOTOR_6020_ID7_INDEX},
-     //2006电机（索引15~22）
+
+    // 2006电机（索引15~22）
     //{1, 0x201, MOTOR_2006, MOTOR_2006_ID1_INDEX},
     //{1, 0x202, MOTOR_2006, MOTOR_2006_ID2_INDEX},
     // {1, 0x203, MOTOR_2006, MOTOR_2006_ID3_INDEX},
     // {1, 0x204, MOTOR_2006, MOTOR_2006_ID4_INDEX},
-     {1, 0x205, MOTOR_2006, MOTOR_2006_ID5_INDEX},
-    // {1, 0x206, MOTOR_2006, MOTOR_2006_ID6_INDEX},
+    {1, 0x205, MOTOR_2006, MOTOR_2006_ID5_INDEX},
+    {1, 0x206, MOTOR_2006, MOTOR_2006_ID6_INDEX},
     // {1, 0x207, MOTOR_2006, MOTOR_2006_ID7_INDEX},
     // {1, 0x208, MOTOR_2006, MOTOR_2006_ID8_INDEX},
 };
 
-// 配置表项数
+// 配置表项数（自动计算）
 const uint8_t motor_config_count = sizeof(motor_configs) / sizeof(motor_configs[0]);
 
 /* =========================== 内部辅助函数 =========================== */
@@ -75,11 +77,11 @@ static uint8_t is_can_initialized(FDCAN_HandleTypeDef *hfdcan) {
 }
 
 /* =========================== 电机初始化 =========================== */
-HAL_StatusTypeDef Motor_Init(void) {
-    //初始化反馈数组
+HAL_StatusTypeDef DJI_Motor_Init(void) {
+    // 1. 初始化反馈数组（清零）
     memset(motor_feedback, 0, sizeof(motor_feedback));
 
-    //根据配置表预设电机类型（可选，接收时还会再设置）
+    // 2. 根据配置表预设电机类型（可选，接收时还会再设置）
     for (uint8_t i = 0; i < motor_config_count; i++) {
         uint8_t idx = motor_configs[i].store_index;
         if (idx < MOTOR_NUM) {
@@ -87,7 +89,7 @@ HAL_StatusTypeDef Motor_Init(void) {
         }
     }
 
-    //停止所有已激活CAN口上的所有电机组
+    // 3. 停止所有已激活CAN口上的所有电机组（安全起见）
     uint32_t all_group_ids[] = {0x200, 0x1FF, 0x1FE, 0x2FE};
     int num_groups = sizeof(all_group_ids) / sizeof(all_group_ids[0]);
 
@@ -95,7 +97,7 @@ HAL_StatusTypeDef Motor_Init(void) {
     for (int i = 0; i < 3; i++) {
         if (is_can_initialized(can_handles[i])) {
             for (int j = 0; j < num_groups; j++) {
-                Motor_SendCurrent_Ex(can_handles[i], all_group_ids[j], 0, 0, 0, 0);
+                DJI_Motor_SendCurrent_Ex(can_handles[i], all_group_ids[j], 0, 0, 0, 0);
             }
         }
     }
@@ -105,7 +107,7 @@ HAL_StatusTypeDef Motor_Init(void) {
 }
 
 /* =========================== 电流发送函数 =========================== */
-HAL_StatusTypeDef Motor_SendCurrent_Ex(FDCAN_HandleTypeDef *hfdcan,
+HAL_StatusTypeDef DJI_Motor_SendCurrent_Ex(FDCAN_HandleTypeDef *hfdcan,
                                         uint32_t group_id,
                                         int16_t current1, int16_t current2,
                                         int16_t current3, int16_t current4) {
@@ -118,13 +120,13 @@ HAL_StatusTypeDef Motor_SendCurrent_Ex(FDCAN_HandleTypeDef *hfdcan,
     data[5] = current3;
     data[6] = current4 >> 8;
     data[7] = current4;
-    // 替换原 FDCAN_Send 调用
+
     uint8_t ret = fdcanx_send_data(hfdcan, (uint16_t)group_id, data, 8);
     return (ret == 0) ? HAL_OK : HAL_ERROR;
 }
 
 /* =========================== 角度目标设置 =========================== */
-void Motor_SetAngleTarget(uint8_t motor_index, float target_angle, int16_t target_loop) {
+void DJI_Motor_SetAngleTarget(uint8_t motor_index, float target_angle, int16_t target_loop) {
     if (motor_index >= MOTOR_NUM) return;
     Motor_Feedback_t *fb = &motor_feedback[motor_index];
     fb->angle_target = target_angle;
@@ -141,7 +143,7 @@ void Motor_SetAngleTarget(uint8_t motor_index, float target_angle, int16_t targe
 }
 
 /* =========================== 反馈接收函数（核心，查表方式） =========================== */
-void Motor_ReceiveFeedback(FDCAN_HandleTypeDef *hfdcan,
+void DJI_Motor_ReceiveFeedback(FDCAN_HandleTypeDef *hfdcan,
                             FDCAN_RxHeaderTypeDef *RxHeader,
                             uint8_t *RxData) {
     uint32_t id = RxHeader->Identifier;

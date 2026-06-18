@@ -1,13 +1,13 @@
 #include "stm32h7xx_hal.h"
-#include "Grapper.h"
+#include "Grabber.h"
 #include "tim.h"
 
-void Grapper_Init(void) {
+void Grabber_Init(void) {
 
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);//R2夹爪舵机用
 
     //继电器控制电磁阀夹爪
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_RESET);
     Set_Angle270(25.0f);//初始水平位置
 }
 
@@ -68,4 +68,13 @@ void sevo270(float start_angle, float end_angle, float step) {
     for ( float ang = start_angle ; ang <= end_angle; ang += step) {
         Set_Angle270(ang);
     }
+}
+
+void Grabber_Task(uint8_t key) {
+
+    if (key) {
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_SET);
+        sevo270(25.0f, 25.0f, 0.1f);
+    }
+
 }

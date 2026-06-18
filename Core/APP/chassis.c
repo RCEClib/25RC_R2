@@ -1,9 +1,10 @@
 #include "chassis.h"
-#include "motor.h"
+#include "DJI_Motor.h"
 #include "pid.h"
 #include <math.h>
 #include <stdlib.h>
 #include "bsp_fdcan.h"
+#include "Serial.h"
 
 // ============================ 全局变量定义 ============================
 float target_speed;        // 轮速PID目标值（RPM）
@@ -14,11 +15,14 @@ float right_current_out;   // 右轮输出电流
 // ============================ 宏定义 ============================
 
 // 底盘几何参数（根据实际轮子和底盘尺寸调整）
-#define WHEEL_RADIUS        0.10f          // 车轮半径（米）
-#define WHEEL_BASE          0.51f           // 左右轮轮距（米），即矩阵中的 2*y
+#define WHEEL_RADIUS          0.10f           // 车轮半径（米）
+#define WHEEL_BASE            0.51f           // 左右轮轮距（米），即矩阵中的 2*y
+#define TAISHENG_RADIUS       0.025f          // 抬升轮半径（米）
 
 // 3508电机减速比（电机转19圈，轮子转1圈）
 #define MOTOR_3508_GEAR_RATIO  19.0f
+//2006电机减速比（电机转1圈，轮子转1圈）
+#define MOTOR_2006_GEAR_RATIO  36.0f
 
 // 速度限幅
 #define MAX_LINEAR_SPEED    2.5f             // 最大线速度 (m/s)
@@ -27,6 +31,7 @@ float right_current_out;   // 右轮输出电流
 
 // 安全保护：最大允许电流（根据电机和驱动器实际限制调整）
 #define MAX_WHEEL_CURRENT   16384            // 3508电机最大电流
+#define MAX_TAISHENG_CURRENT   10000            // 抬升轮最大电流  m2006
 // 摇杆死区
 #define JOYSTICK_DEADZONE   1.0f
 
@@ -77,7 +82,7 @@ void diff_solve(float vx, float omega, float *out_left_rpm, float *out_right_rpm
 void Chassis_Init(Chassis_t *chassis) {
     if (chassis == NULL) return;
 
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_RESET);//气缸爬楼梯控制
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);//气缸爬楼梯控制
 
     chassis->Target_Vx = 0.0f;
     chassis->Target_Omega = 0.0f;
@@ -89,6 +94,11 @@ void Chassis_Init(Chassis_t *chassis) {
         PID_Init(&chassis->wheel_pid[i],6.2f, 1.4f, 0.1f,MAX_WHEEL_CURRENT, 1000);
         chassis->wheel_currents[i] = 0;
     }
+    // 初始化抬升轮PID（位置式速度环，输入：RPM，输出：电流）
+    for (int i = 0; i < 2; i++) {
+        PID_Init(&chassis->taisheng_pid[i],1.2f, 0.4f, 0.0f,MAX_TAISHENG_CURRENT, 1000);
+        chassis->taisheng_currents[i] = 0;
+    }
 
     // 电机方向校准（根据实际接线调整，1=正向，-1=反向）
     // 顺序：0-左前, 1-左后, 2-右后, 3-右前
@@ -97,14 +107,26 @@ void Chassis_Init(Chassis_t *chassis) {
     chassis->wheel_direction_calibration[2] = -1;   // 右后
     chassis->wheel_direction_calibration[3] = -1;   // 右前
 
+    // 抬升轮方向校准（根据实际接线调整，1=正向，-1=反向）
+    chassis->taisheng_direction_calibration[0] = 1;
+    chassis->taisheng_direction_calibration[1] = -1;
+
     // 验证并修正校准系数
     for (int i = 0; i < 4; i++) {
         chassis->wheel_direction_calibration[i] = CheckDirectionCalibration(
             chassis->wheel_direction_calibration[i]);
     }
 
+    // 抬升轮方向校准（根据实际接线调整，1=正向，-1=反向）
+    for (int i = 0; i < 2; i++) {
+        chassis->taisheng_direction_calibration[i] = CheckDirectionCalibration(
+            chassis->taisheng_direction_calibration[i]);
+    }
+
     // 发送零电流，使电机处于待机状态
-    Motor_SendCurrent_Ex(&hfdcan1, MOTOR_3508_GROUP1, 0, 0, 0, 0);
+    DJI_Motor_SendCurrent_Ex(&hfdcan1, MOTOR_3508_GROUP1, 0, 0, 0, 0);
+    //抬升前主动轮
+    DJI_Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2, 0, 0, 0, 0);
 }
 
 // ============================ 差速控制（PID + 电流发送） ============================
@@ -143,11 +165,43 @@ void Chassis_Control(Chassis_t *chassis) {
     right_current_out = (chassis->wheel_currents[2] + chassis->wheel_currents[3]) * 0.5f;
 
     // 发送电流指令（顺序：左前,左后,右后,右前）
-    Motor_SendCurrent_Ex(&hfdcan1, MOTOR_3508_GROUP1,
+    DJI_Motor_SendCurrent_Ex(&hfdcan1, MOTOR_3508_GROUP1,
                          chassis->wheel_currents[0],   // 左前
                          chassis->wheel_currents[1],   // 左后
                          chassis->wheel_currents[2],   // 右后
                          chassis->wheel_currents[3]);  // 右前
+}
+
+/* 抬升轮：线速度(m/s) → 电机RPM */
+static float TaishengToMotorRpm(float linear_speed) {
+    float wheel_rps = linear_speed / (2.0f * (float)M_PI * TAISHENG_RADIUS);
+    return wheel_rps * 60.0f * MOTOR_2006_GEAR_RATIO;
+}
+
+void Chassis_Taisheng_Control(Chassis_t *chassis) {
+    if (chassis == NULL) return;
+
+    float target_rpm = TaishengToMotorRpm(chassis->Target_Vx);
+
+    for (int i = 0; i < 2; i++) {
+        float actual_rpm = motor_feedback[MOTOR_2006_ID5_INDEX + i].speed
+                         * chassis->taisheng_direction_calibration[i];
+
+        int16_t current = (int16_t)PID_Calculate(&chassis->taisheng_pid[i],
+                                                  target_rpm, actual_rpm);
+        if (current > MAX_TAISHENG_CURRENT)  current = MAX_TAISHENG_CURRENT;
+        if (current < -MAX_TAISHENG_CURRENT) current = -MAX_TAISHENG_CURRENT;
+
+        Serial_Printf("%f,%f\n", target_rpm,actual_rpm);
+
+        chassis->taisheng_currents[i] = current * chassis->taisheng_direction_calibration[i];
+
+    }
+
+    DJI_Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2,
+                             chassis->taisheng_currents[0],
+                             chassis->taisheng_currents[1],
+                             0, 0);
 }
 
 // ============================ 底盘任务函数 ============================
@@ -164,12 +218,7 @@ void Chassis_Control(Chassis_t *chassis) {
 void Chassis_Task(Chassis_t *Chassis, Chassis_Mode mode, float vx, float vy, float vw, int8_t valve) {
     if (Chassis == NULL) return;
 
-
-
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, valve);//爬楼梯气缸开关
-
-
-
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, valve);//爬楼梯气缸开关
 
     // 死区处理（摇杆小信号归零）
     if (fabsf(vx) < JOYSTICK_DEADZONE) vx = 0.0f;
@@ -213,14 +262,20 @@ void Chassis_Task(Chassis_t *Chassis, Chassis_Mode mode, float vx, float vy, flo
                            &Chassis->target_right_rpm);
                 // PID控制 + 电流发送
                 Chassis_Control(Chassis);
+
+                if(valve){
+                    Chassis_Taisheng_Control(Chassis);
+                }
                 break;
             case STOP_MODE:
             default:
-                Motor_SendCurrent_Ex(&hfdcan1,MOTOR_3508_GROUP1, 0, 0, 0, 0);
+                DJI_Motor_SendCurrent_Ex(&hfdcan1,MOTOR_3508_GROUP1, 0, 0, 0, 0);
+                DJI_Motor_SendCurrent_Ex(&hfdcan1,MOTOR_2006_GROUP2, 0, 0, 0, 0);
                 break;
         }
     } else {
         // 未使能，发送零电流
-        Motor_SendCurrent_Ex(&hfdcan1,MOTOR_3508_GROUP1, 0, 0, 0, 0);
+        DJI_Motor_SendCurrent_Ex(&hfdcan1,MOTOR_3508_GROUP1, 0, 0, 0, 0);
+        DJI_Motor_SendCurrent_Ex(&hfdcan1,MOTOR_2006_GROUP2, 0, 0, 0, 0);
     }
 }

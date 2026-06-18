@@ -27,7 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "motor.h"
+#include "DJI_Motor.h"
 #include "serial.h"
 #include "elrs.h"
 #include "bsp_fdcan.h"
@@ -122,18 +122,9 @@ int main(void)
   bsp_can_init(&hfdcan2);
   bsp_can_init(&hfdcan3);
 
-  dm_motor_init();
-  HAL_Delay(500);
-  motor[Motor1].ctrl.mode = mit_mode;
-  //清除错误并使能
-  dm_motor_clear_err(&motor[Motor1]);
-  HAL_Delay(1000);
-  dm_motor_enable(&motor[Motor1]);
-  HAL_Delay(1000);
-
-  Motor_Init();
+  DJI_Motor_Init();
   ELRS_Init();
-
+  Arm_Init();
   Chassis_Init(&Chassis);
   /* USER CODE END 2 */
 
@@ -141,15 +132,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // 发送 MIT 控制指令（正弦位置）
-    static float t = 0;
-    t += 0.01f;
-    motor[Motor1].ctrl.pos_set = 3.14f * sinf(t);
-    dm_motor_ctrl_send(&motor[Motor1]);
-    HAL_Delay(10);
 
-    //Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2, 500, 0, 0, 0);
-    Serial_Printf("%d,%f\n", motor_feedback[MOTOR_2006_ID5_INDEX].loop / 36,motor_feedback[MOTOR_2006_ID5_INDEX].angle);
+    //mit_ctrl(motor[Motor2].hcan, &motor[Motor2], motor[Motor2].id,3.14*0,0,9,0,0);
+    //pos_ctrl(motor[Motor2].hcan, motor[Motor2].id,3.14,1);
+    //spd_ctrl(motor[Motor2].hcan, motor[Motor2].id,2);
+
+    Arm_Task(remoter.var.S1*0.0314,remoter.var.S2*0.0314,remoter.joy.r_x);
+    //DJI_Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2, 500, 0, 0, 0);
+    //Serial_Printf("%d,%f\n", motor_feedback[MOTOR_2006_ID5_INDEX].loop / 36,motor_feedback[MOTOR_2006_ID5_INDEX].angle);
     //Serial_Printf("%f,%f\n", target_speed, actual_speed);//2006
     Chassis_Task(&Chassis,remoter.key.SA,remoter.joy.l_x,remoter.joy.l_y,remoter.joy.r_y,remoter.key.SE);
     HAL_Delay(0);
