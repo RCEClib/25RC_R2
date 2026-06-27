@@ -34,6 +34,7 @@
 #include "chassis.h"
 #include "Arm.h"
 #include "dm_motor_ctrl.h"
+#include "ws2812.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -130,19 +131,22 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  //RGB控制
+  WS2812_Ctrl(3, 4, 5);
+
   while (1)
   {
-
-    //mit_ctrl(motor[Motor2].hcan, &motor[Motor2], motor[Motor2].id,3.14*0,0,9,0,0);
+    Arm_Task(remoter.key.SD, remoter.key.SB, -remoter.var.S1*0.0314,-remoter.var.S2*0.0628,remoter.joy.r_x*0.0157);
+    //mit_ctrl(motor[Motor2].hcan, &motor[Motor2], motor[Motor2].id,remoter.var.S1*0.0314,0,9,2,0);
     //pos_ctrl(motor[Motor2].hcan, motor[Motor2].id,3.14,1);
     //spd_ctrl(motor[Motor2].hcan, motor[Motor2].id,2);
-
-    Arm_Task(remoter.var.S1*0.0314,remoter.var.S2*0.0314,remoter.joy.r_x);
     //DJI_Motor_SendCurrent_Ex(&hfdcan1, MOTOR_2006_GROUP2, 500, 0, 0, 0);
     //Serial_Printf("%d,%f\n", motor_feedback[MOTOR_2006_ID5_INDEX].loop / 36,motor_feedback[MOTOR_2006_ID5_INDEX].angle);
     //Serial_Printf("%f,%f\n", target_speed, actual_speed);//2006
     Chassis_Task(&Chassis,remoter.key.SA,remoter.joy.l_x,remoter.joy.l_y,remoter.joy.r_y,remoter.key.SE);
     HAL_Delay(0);
+    //DJI_Motor_SendCurrent_Ex(&hfdcan1,MOTOR_3508_GROUP1, 0, 0, 0, 0);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

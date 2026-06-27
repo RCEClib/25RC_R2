@@ -18,7 +18,7 @@ void dm_motor_init(motor_num id, FDCAN_HandleTypeDef *hcan, uint16_t can_id,mode
     // 设置电机信息
 	motor[id].hcan = hcan;
     motor[id].id = can_id;
-    motor[id].mst_id = 0x00;        // 实际没有用上，只做标识作用
+    motor[id].mst_id = can_id + 0x10;   // 反馈帧CAN ID = 命令ID + 0x10（MIT模式）
     motor[id].tmp.read_flag = 1;
     motor[id].ctrl.mode     = mode;    // 选择位置速度模式
     motor[id].ctrl.vel_set  = 0.0f;        // 设置速度
@@ -31,6 +31,8 @@ void dm_motor_init(motor_num id, FDCAN_HandleTypeDef *hcan, uint16_t can_id,mode
     motor[id].tmp.PMAX      = 12.5f;
     motor[id].tmp.VMAX      = 30.0f;
     motor[id].tmp.TMAX      = 10.0f;
+	
+    motor[id].tmp.read_flag = 0;    // 不使用寄存器读取，防止MIT反馈误触发receive_motor_data破坏参数
 
     dm_motor_clear_err(&motor[id]);
     HAL_Delay(500);

@@ -16,7 +16,7 @@ void bsp_can_init(FDCAN_HandleTypeDef *hfdcan)
 {
     can_filter_init(hfdcan);                     // 先配置接收过滤器（决定哪些ID能通过）
 
-    HAL_FDCAN_Start(hfdcan);             // 启动FDCAN外设（进入正常模式）
+    HAL_FDCAN_Start(hfdcan);             // 启动FDCAN外设（进入正常模式）zz
 
     // 激活多种FDCAN中断：RX FIFO0水位线、TX完成、TX FIFO空、总线关闭、仲裁/数据协议错误、错误被动、错误警告
     // 注意：第二个参数中 FDCAN_IT_RX_FIFO0_WATERMARK 重复写了两次（不影响结果），第三个参数是掩码（0x00000F00）此处未实际使用
@@ -274,12 +274,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         }
 
         /* ====================处理达妙电机反馈 ==================== */
-        // 遍历全局达妙电机数组 motor[]，寻找 ID 和 CAN 句柄都匹配的电机
+        // 遍历全局达妙电机数组 motor[]，寻找反馈ID和CAN句柄都匹配的电机
         for (int i = 0; i < num; i++)
         {
-            // motor[i].id    : 该电机的CAN反馈ID（通常为0x01~0x0F）
+            // motor[i].mst_id: 达妙电机反馈帧CAN ID（如MIT模式为 0x10 + 命令ID）
             // motor[i].hcan  : 该电机所连接的CAN口句柄
-            if (motor[i].id == rec_id && motor[i].hcan == hfdcan)
+            if (rec_id == motor[i].mst_id && motor[i].hcan == hfdcan)
             {
                 // 解析反馈数据（位置、速度、扭矩、温度等）
                 dm_motor_fbdata(&motor[i], rx_data);
