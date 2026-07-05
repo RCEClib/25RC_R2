@@ -68,7 +68,6 @@ static void MPU_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-Chassis_t Chassis;
 /* USER CODE END 0 */
 
 /**
@@ -114,6 +113,7 @@ int main(void)
   MX_TIM12_Init();
   MX_SPI6_Init();
   MX_TIM1_Init();
+  MX_UART7_Init();
   /* USER CODE BEGIN 2 */
   Serial_Init();
   bsp_fdcan_set_baud(&hfdcan1, CAN_CLASS, CAN_BR_1M);
@@ -137,7 +137,7 @@ int main(void)
 
   while (1)
   {
-    Arm_Task(remoter.key.SD, remoter.key.SB, -remoter.var.S1*0.0314,-remoter.var.S2*0.0628,remoter.joy.r_x*0.0157);
+    Arm_Task(remoter.key.SA, remoter.joy.l_x, -remoter.var.S1*0.0314,-remoter.var.S2*0.0628,remoter.joy.r_x*0.0157);
     //mit_ctrl(motor[Motor2].hcan, &motor[Motor2], motor[Motor2].id,remoter.var.S1*0.0314,0,9,2,0);
     //pos_ctrl(motor[Motor2].hcan, motor[Motor2].id,3.14,1);
     //spd_ctrl(motor[Motor2].hcan, motor[Motor2].id,2);
@@ -145,7 +145,7 @@ int main(void)
     //Serial_Printf("%d,%f\n", motor_feedback[MOTOR_2006_ID5_INDEX].loop / 36,motor_feedback[MOTOR_2006_ID5_INDEX].angle);
     //Serial_Printf("%f,%f\n", target_speed, actual_speed);//2006
     Chassis_Task(&Chassis,remoter.key.SA,remoter.joy.l_x,remoter.joy.l_y,remoter.joy.r_y,remoter.key.SE);
-    HAL_Delay(0);
+    HAL_Delay(10);
     //DJI_Motor_SendCurrent_Ex(&hfdcan1,MOTOR_3508_GROUP1, 0, 0, 0, 0);
     /* USER CODE END WHILE */
 

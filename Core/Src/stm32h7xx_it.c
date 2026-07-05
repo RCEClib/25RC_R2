@@ -62,6 +62,7 @@ extern DMA_HandleTypeDef hdma_spi2_rx;
 extern DMA_HandleTypeDef hdma_spi2_tx;
 extern SPI_HandleTypeDef hspi2;
 extern DMA_HandleTypeDef hdma_usart10_rx;
+extern UART_HandleTypeDef huart7;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart10;
 /* USER CODE BEGIN EV */
@@ -345,6 +346,20 @@ void FDCAN_CAL_IRQHandler(void)
   /* USER CODE BEGIN FDCAN_CAL_IRQn 1 */
 
   /* USER CODE END FDCAN_CAL_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART7 global interrupt.
+  */
+void UART7_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART7_IRQn 0 */
+
+  /* USER CODE END UART7_IRQn 0 */
+  HAL_UART_IRQHandler(&huart7);
+  /* USER CODE BEGIN UART7_IRQn 1 */
+
+  /* USER CODE END UART7_IRQn 1 */
 }
 
 /**

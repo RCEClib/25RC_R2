@@ -91,6 +91,8 @@ void sbus_frame_parse(remoter_t *remoter, uint8_t *buf) {
     remoter->rc.ch[15] =
         ((uint16_t)buf[23] >> 5 | ((uint16_t)buf[24] << 3)) & 0x07FF;
 
+
+
     remoter->joy.l_y =
         float_Map_with_median(remoter->rc.ch[3], 174, 1811, 992, -100, 100);
     remoter->joy.l_x =
@@ -100,20 +102,40 @@ void sbus_frame_parse(remoter_t *remoter, uint8_t *buf) {
     remoter->joy.r_x =
         float_Map_with_median(remoter->rc.ch[1], 174, 1811, 992, -100, 100);
 
-    remoter->key.SA = remoter->rc.ch[5] == 997 ? 1 : (remoter->rc.ch[5] == 1792 ? 2 : 0);
-    remoter->key.SB =remoter->rc.ch[6] == 997 ? 1 : (remoter->rc.ch[6] == 1792 ? 2 : 0);
 
-    remoter->key.SC =remoter->rc.ch[7] == 997 ? 1 : (remoter->rc.ch[7] == 1792 ? 2 : 0);
+//TX
+    // remoter->key.SA = remoter->rc.ch[5] == 997 ? 1 : (remoter->rc.ch[5] == 1792 ? 2 : 0);
+    // remoter->key.SB =remoter->rc.ch[6] == 997 ? 1 : (remoter->rc.ch[6] == 1792 ? 2 : 0);
+    //
+    // remoter->key.SC =remoter->rc.ch[7] == 997 ? 1 : (remoter->rc.ch[7] == 1792 ? 2 : 0);
+    //
+    // remoter->key.SD = remoter->rc.ch[8] == 997 ? 1 : (remoter->rc.ch[8] == 1792 ? 2 : 0);
+    //
+    // remoter->key.SE = remoter->rc.ch[8] > 1000 ? 1 : 0;
+    // remoter->key.SF = remoter->rc.ch[9] > 1000 ? 1 : 0;
+    //
+    // remoter->var.S1 =
+    //     float_Map_with_median(remoter->rc.ch[10], 191, 1792, 992, -100, 100);
+    // remoter->var.S2 =
+    //     float_Map_with_median(remoter->rc.ch[11], 191, 1792, 992, -100, 100);
 
-    remoter->key.SD = remoter->rc.ch[8] == 997 ? 1 : (remoter->rc.ch[8] == 1792 ? 2 : 0);
 
-    remoter->key.SE = remoter->rc.ch[4] > 1000 ? 1 : 0;
+
+//V14
+    remoter->key.SA = remoter->rc.ch[4] > 1000 ? 1 : 0;
+    remoter->key.SB = remoter->rc.ch[5] == 992 ? 1 : (remoter->rc.ch[5] == 1810 ? 2 : 0);
+    remoter->key.SC =remoter->rc.ch[6] == 992 ? 1 : (remoter->rc.ch[6] == 1810 ? 2 : 0);
+
+    remoter->key.SD =remoter->rc.ch[7] > 1000 ? 1 : 0;
+
+    remoter->key.SE = remoter->rc.ch[8]  > 1000 ? 1 : 0;
+
     remoter->key.SF = remoter->rc.ch[9] > 1000 ? 1 : 0;
 
     remoter->var.S1 =
-        float_Map_with_median(remoter->rc.ch[10], 191, 1792, 992, -100, 100);
+        float_Map_with_median(remoter->rc.ch[10], 172, 1810, 992, -100, 100);
     remoter->var.S2 =
-        float_Map_with_median(remoter->rc.ch[11], 191, 1792, 992, -100, 100);
+        float_Map_with_median(remoter->rc.ch[11], 172, 1810, 992, -100, 100);
 }
 
 

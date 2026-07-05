@@ -46,9 +46,10 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-        Core/APP/chassis.c
         Core/APP/Arm.c
+        Core/APP/chassis.c
         Core/APP/Grabber.c
+        Core/APP/ros_serial.c
 
         Core/BSP/BMI088driver.c
         Core/BSP/BMI088Middleware.c
@@ -61,6 +62,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         Core/Hardware/dm_motor_drv.c
         Core/Hardware/elrs.c
         Core/Hardware/imu.c
+        Core/Hardware/lwrb.c
         Core/Hardware/DJI_Motor.c
         Core/Hardware/YOU.c
 )
